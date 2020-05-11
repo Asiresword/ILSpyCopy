@@ -6,8 +6,27 @@
         xmlns:local="clr-namespace:ILSpy"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
+    <Window.Resources>
+        <Style TargetType="{x:Type TreeViewItem}">
+            <Setter Property="Margin" Value="5"/>
+        </Style>
+    </Window.Resources>
+    
     <DockPanel LastChildFill="True">
-        <Menu IsMainMenu="True" Height="Auto">
+        <Menu IsMainMenu="True" Height="Auto" DockPanel.Dock="Top">
+            <MenuItem Header="File">
+                <MenuItem Header="Open" x:Name="OpenMenu" Click="OpenMenu_Click">
+                    <MenuItem.Icon>
+                        <Image Source="./Images/OpenFolder_16x.png"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="Exit" x:Name="ExitMenu" Click="ExitMenu_Click"/>
+            </MenuItem>
         </Menu>
+
+        <TreeView DockPanel.Dock="Left" x:Name="AssemblyInfoTree" Padding="0 0 200 0">
+        </TreeView>
+        <Frame x:Name="MainFrame" Margin="20"/>
     </DockPanel>
 </Window>
