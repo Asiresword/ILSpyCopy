@@ -45,6 +45,27 @@ namespace ILSpy
             }
         }
 
+        private TreeViewItem LoadAssemblyDependencies(Assembly InnerAssembly, List<string> PreviousCallStack)
+        {
+            if(PreviousCallStack.Where(w => w == InnerAssembly.GetName().Name).Count() > 2)
+            {
+                return null;
+            }
+            PreviousCallStack.Add(InnerAssembly.GetName().Name);
+
+            TreeViewItem Item = new TreeViewItem() { Header = InnerAssembly.GetName().Name };
+            AssemblyName[] Names = InnerAssembly.GetReferencedAssemblies();
+            foreach(AssemblyName Name in Names)
+            {
+                TreeViewItem InnerItem = LoadAssemblyDependencies(Assembly.Load(Name), PreviousCallStack);
+                if (InnerItem != null)
+                {
+                    Item.Items.Add(InnerItem);
+                }
+            }
+            return Item;
+        }
+
         private TreeViewItem ConfigureTreeViewItemType(Type type, Assembly FileAssembly)
         {
             TreeViewItem Item = new TreeViewItem() { Header = type.Name };
@@ -151,14 +172,19 @@ namespace ILSpy
                     MainItem.Items.Add(NamespaceItem);
                 }
 
-                MainItem.Items.Add(References);
-
                 foreach(AssemblyName Name in FileAssembly.GetReferencedAssemblies())
                 {
-                    //Assembly InnerAssembly = Assembly.Load(Name);
-                    References.Items.Add(new TreeViewItem() { Header = Name.Name });
+                    try
+                    {
+                        References.Items.Add(LoadAssemblyDependencies(Assembly.Load(Name), new List<string>() { Name.Name }));
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Unable to load dependecies: " + ex.Message);
+                    }
                 }
 
+                MainItem.Items.Add(References);
                 this.AssemblyInfoTree.Items.Add(MainItem);
             }
             catch(System.IO.IOException ex)
