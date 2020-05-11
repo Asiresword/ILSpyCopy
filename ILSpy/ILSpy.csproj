@@ -94,13 +94,5 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup />
-  <ItemGroup>
-    <Resource Include="Images\CSAssemblyInfoFile_16x.png" />
-    <Resource Include="Images\Library_16x.png" />
-    <Resource Include="Images\OpenFolder_16x.png" />
-    <Resource Include="Images\Reference_16x.png" />
-    <Resource Include="Images\Visible_16x.png" />
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

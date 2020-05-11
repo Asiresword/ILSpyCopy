@@ -16,16 +16,10 @@ using System.Windows.Shapes;
 
 namespace ILSpy
 {
-    internal enum TreeViewItemType
-    {
-        Assembly,
-        References,
-        Reference
-    }
-
     public partial class MainWindow : Window
     {
         private string FileName { get; set; }
+
         public MainWindow()
         {
             InitializeComponent();
@@ -51,49 +45,121 @@ namespace ILSpy
             }
         }
 
-        private TreeViewItem ConfigureTreeViewItemSource(string Name, TreeViewItemType Type)
+        private TreeViewItem ConfigureTreeViewItemType(Type type, Assembly FileAssembly)
         {
-            TreeViewItem Item = new TreeViewItem();
-            StackPanel Panel = new StackPanel();
-            Image Image = new Image();
-            TextBlock Block = new TextBlock();
+            TreeViewItem Item = new TreeViewItem() { Header = type.Name };
+            TreeViewItem BasedOn = new TreeViewItem() { Header = "BasedOn" };
+            TreeViewItem DerivedFrom = new TreeViewItem() { Header = "Derived classes" };
+            TreeViewItem Methods = new TreeViewItem() { Header = "Methods" };
+            TreeViewItem Fields = new TreeViewItem() { Header = "Fields" };
+            TreeViewItem Properties = new TreeViewItem() { Header = "Properties" };
 
-            if(Type == TreeViewItemType.Assembly)
+            if (type.BaseType != null)
             {
-                Image.Source = new BitmapImage(new Uri("../../Images/CSAssemblyInfoFile_16x.png", UriKind.Relative));
+                BasedOn.Items.Add(new TreeViewItem() { Header = type.BaseType.FullName });
             }
-            else
+
+            Type[] DerivedClasses = (from assemblyType in FileAssembly.GetTypes()
+                                     where assemblyType.IsSubclassOf(type)
+                                     select assemblyType).ToArray();
+
+            foreach(Type t in DerivedClasses)
             {
-                Image.Source = new BitmapImage(new Uri("../../Images/Reference_16x.png", UriKind.Relative));
+                DerivedFrom.Items.Add(new TreeViewItem() { Header = t.FullName });
             }
-            Image.Margin = new Thickness(5, 0, 5, 0);
-            Block.Text = Name;
 
-            Panel.Children.Add(Image);
-            Panel.Children.Add(Block);
+            foreach (MethodInfo Info in type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
+            { 
+                string Method = Info.IsPrivate ? "-" : "+";
+                Method = Info.IsFamilyOrAssembly ? "#" : "+";
+                Method += " " + Info.Name;
+                Method += "(";
+                foreach(ParameterInfo PInfo in Info.GetParameters())
+                {
+                    Method += PInfo.ParameterType + " " + PInfo.Name + ", ";
+                }
+                Method += ")";
 
-            Item.Header = Panel;
+
+                Methods.Items.Add(new TreeViewItem() { Header = Method });
+            }
+
+            foreach (FieldInfo Info in type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
+            {
+                string Field = Info.IsPrivate ? "-" : "+";
+                Field = Info.IsFamilyOrAssembly ? "#" : "+";
+                Field += " " + Info.Name;
+
+                Fields.Items.Add(new TreeViewItem() { Header = Field });
+            }
+
+            foreach (PropertyInfo Info in type.GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
+            {
+                Properties.Items.Add(new TreeViewItem() { Header = Info.Name });
+            }
+
+            Item.Items.Add(BasedOn);
+            Item.Items.Add(DerivedFrom);
+            Item.Items.Add(Methods);
+            Item.Items.Add(Fields);
+            Item.Items.Add(Properties);
 
             return Item;
+        }
+
+        private Dictionary<string, List<Type>> GetNamespacesTypes(Assembly FileAssembly)
+        {
+            Dictionary<string, List<Type>> NamespacesTypes = new Dictionary<string, List<Type>>();
+
+            Type[] Types = FileAssembly.GetTypes();
+            foreach(Type type in Types)
+            {
+                if (!string.IsNullOrEmpty(type.Namespace))
+                {
+                    if (!NamespacesTypes.ContainsKey(type.Namespace))
+                    {
+                        NamespacesTypes.Add(type.Namespace, new List<Type>() { type });
+                    }
+                    else
+                    {
+                        NamespacesTypes[type.Namespace].Add(type);
+                    }
+                }
+            }
+
+            return NamespacesTypes;
         }
 
         private void LoadReflection()
         {
             try
             {
-                /*Assembly FileAssembly = Assembly.LoadFrom(this.FileName);
-                TreeViewItem MainItem = ConfigureTreeViewItemSource(FileAssembly.GetName().Name, TreeViewItemType.Assembly);
-                TreeViewItem References = ConfigureTreeViewItemSource("References", TreeViewItemType.References);
+                Assembly FileAssembly = Assembly.LoadFrom(this.FileName);
+
+                TreeViewItem MainItem = new TreeViewItem() { Header = FileAssembly.GetName().Name };
+                TreeViewItem References = new TreeViewItem() { Header = "References" };
+                Dictionary<string, List<Type>> NamespacesTypes = GetNamespacesTypes(FileAssembly);
+
+                foreach (string Namespace in NamespacesTypes.Keys)
+                {
+                    TreeViewItem NamespaceItem = new TreeViewItem() { Header = Namespace };
+                    foreach (Type type in NamespacesTypes[Namespace])
+                    {
+                        TreeViewItem TypeItem = ConfigureTreeViewItemType(type, FileAssembly);
+                        NamespaceItem.Items.Add(TypeItem);
+                    }
+                    MainItem.Items.Add(NamespaceItem);
+                }
 
                 MainItem.Items.Add(References);
 
                 foreach(AssemblyName Name in FileAssembly.GetReferencedAssemblies())
                 {
                     //Assembly InnerAssembly = Assembly.Load(Name);
-                    References.Items.Add(ConfigureTreeViewItemSource(Name.Name, TreeViewItemType.Reference));
+                    References.Items.Add(new TreeViewItem() { Header = Name.Name });
                 }
 
-                this.AssemblyInfoTree.Items.Add(MainItem);*/
+                this.AssemblyInfoTree.Items.Add(MainItem);
             }
             catch(System.IO.IOException ex)
             {
