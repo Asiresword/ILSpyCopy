@@ -45,9 +45,9 @@ namespace ILSpy
             }
         }
 
-        private TreeViewItem LoadAssemblyDependencies(Assembly InnerAssembly, List<string> PreviousCallStack)
+        private TreeViewItem LoadAssemblyDependencies(Assembly InnerAssembly, SortedSet<string> PreviousCallStack)
         {
-            if(PreviousCallStack.Where(w => w == InnerAssembly.GetName().Name).Count() > 2)
+            if(PreviousCallStack.Contains(InnerAssembly.GetName().Name))
             {
                 return null;
             }
@@ -176,7 +176,7 @@ namespace ILSpy
                 {
                     try
                     {
-                        References.Items.Add(LoadAssemblyDependencies(Assembly.Load(Name), new List<string>() { Name.Name }));
+                        References.Items.Add(LoadAssemblyDependencies(Assembly.Load(Name), new SortedSet<string>()));
                     }
                     catch (Exception ex)
                     {
